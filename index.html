@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#0c1322" media="(prefers-color-scheme: dark)">
 <title>TOP30 트렌드</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.3/packages/wanted-sans/fonts/webfonts/variable/split/WantedSansVariable.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
 <style>
@@ -26,6 +27,42 @@ html[data-theme="dark"]{
   --heat:255,70,85; --heat-lo:#ffd6da; --sticky:rgba(12,19,34,.88); --hover:#1a2440;
   --note-bg:#2a2410; --note-line:#5a4914; --note-ink:#f1d27f;
 }
+/* 시장 온도: 그날 TOP30 평균 상승률로 바탕색이 차분한 남색 → 뜨거운 자주로 바뀜 (--paper는 JS가 설정) */
+html[data-theme="temp"]{
+  color-scheme:dark;
+  --paper:#0f1a2e; --surface:rgba(255,255,255,.055); --ink:#f3f0f2; --slate:#b5adbb; --hair:rgba(255,255,255,.12); --grid:rgba(255,255,255,.08);
+  --red:#ff4d5e; --red-ink:#ff7380; --red-wash:rgba(255,77,94,.18); --crimson:#ff2847;
+  --control:#f3f0f2; --control-ink:#1a1020; --chip:rgba(255,255,255,.09); --chip-ink:#e6dde6; --empty:rgba(255,255,255,.05);
+  --heat:255,77,94; --heat-lo:#ffe1e5; --hover:rgba(255,255,255,.05);
+  --note-bg:rgba(255,214,10,.12); --note-line:rgba(255,214,10,.3); --note-ink:#ffe08a;
+}
+html[data-theme="temp"] body{transition:background-color .6s ease}
+html[data-theme="temp"] .heat tbody th{background:var(--paper)}
+html[data-theme="temp"] .drawer{background:#1b1424}
+/* 전광판: 객장 시세판처럼 검정 바탕에 빛나는 숫자 */
+html[data-theme="board"]{
+  color-scheme:dark;
+  --paper:#000000; --surface:#0a0a0a; --ink:#f4f4f4; --slate:#8f8f8f; --hair:#262626; --grid:#1c1c1c;
+  --red:#ff3b30; --red-ink:#ff453a; --red-wash:rgba(255,59,48,.16); --crimson:#ffd60a;
+  --control:#ffd60a; --control-ink:#000; --chip:#161616; --chip-ink:#d0d0d0; --empty:#111;
+  --heat:255,59,48; --heat-lo:#ffd0cc; --sticky:rgba(0,0,0,.9); --hover:#121212;
+  --note-bg:#1a1600; --note-line:#4d4100; --note-ink:#ffd60a;
+}
+html[data-theme="board"] .brand h1,html[data-theme="board"] .stepper select,html[data-theme="board"] .stock,
+html[data-theme="board"] td.r,html[data-theme="board"] .stats b{font-family:"Galmuri11","DungGeunMo",monospace;letter-spacing:0}
+html[data-theme="board"] .brand h1{color:#ffd60a;text-shadow:0 0 12px rgba(255,214,10,.45)}
+html[data-theme="board"] .stock{background:transparent!important;color:var(--red)!important;border:1px solid rgba(255,59,48,.35);
+  text-shadow:0 0 8px rgba(255,59,48,.65)}
+html[data-theme="board"] .stock.lim{background:#ffd60a!important;color:#000!important;border-color:#ffd60a;text-shadow:none}
+html[data-theme="board"] .stock.lim::after{background:#000;color:#ffd60a}
+html[data-theme="board"] td.r{text-shadow:0 0 8px rgba(255,59,48,.55)}
+html[data-theme="board"] .pill.lim{background:#ffd60a;color:#000}
+html[data-theme="board"] .band:first-child{border-top-color:#ffd60a}
+html[data-theme="board"] .dcell[aria-current="true"]{border-color:#ffd60a;box-shadow:inset 0 0 0 1px #ffd60a}
+.temp{display:inline-flex;align-items:center;gap:6px}
+.temp i{display:inline-block;width:46px;height:6px;border-radius:3px;background:linear-gradient(90deg,#2b4a8a,#7a2a6a,#ff2847);position:relative}
+.temp i::after{content:"";position:absolute;top:-3px;left:calc(var(--t,0) * 100% - 2px);width:4px;height:12px;border-radius:2px;background:var(--ink)}
+select.theme{font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid var(--hair);background:var(--surface);cursor:pointer}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--paper);color:var(--ink);
@@ -126,7 +163,7 @@ select.plain{font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid
 .mv li span{color:var(--slate);font-size:12.5px}
 .mv .up{color:var(--red-ink);font-weight:700}
 .mv .dn{color:#2f6fd6;font-weight:700}
-html[data-theme="dark"] .mv .dn{color:#6aa7ff}
+html[data-theme="dark"] .mv .dn,html[data-theme="temp"] .mv .dn,html[data-theme="board"] .mv .dn{color:#6aa7ff}
 
 /* ---------- heatmap */
 .heat{border-collapse:separate;border-spacing:2px;width:auto;font-size:11px}
@@ -190,7 +227,10 @@ footer{font-size:12px;color:var(--slate);line-height:1.7;border-top:1px solid va
       <p id="asof">불러오는 중…</p>
     </div>
     <div class="tools">
-      <button class="btn" id="theme" aria-label="화면 밝기 전환">🌙</button>
+      <select class="theme" id="theme" aria-label="화면 테마">
+        <option value="temp">🌡 시장 온도</option><option value="board">▦ 전광판</option>
+        <option value="light">☀ 밝게</option><option value="dark">☾ 어둡게</option>
+      </select>
       <a class="btn" href="https://kr.investing.com/indices/korea-200-futures" target="_blank" rel="noopener">야간선물 ↗</a>
       <button class="btn solid" id="dl">엑셀 다운로드</button>
     </div>
@@ -312,21 +352,37 @@ async function getJSON(u){ const r = await fetch(u,{cache:'no-store'}); if(!r.ok
 
 // ---------------------------------------------------------------- 테마
 function chartTheme(){
+  const t = document.documentElement.dataset.theme, light = t==='light';
   Chart.defaults.color = css('--slate');
   Chart.defaults.borderColor = css('--grid');
   Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
-  Object.assign(Chart.defaults.plugins.tooltip, {backgroundColor:css('--ink'), titleColor:css('--surface'), bodyColor:css('--surface'), padding:10, cornerRadius:8});
+  Object.assign(Chart.defaults.plugins.tooltip, {backgroundColor: light?'#14213d':'#f4f4f4', titleColor: light?'#fff':'#111', bodyColor: light?'#fff':'#111', padding:10, cornerRadius:8});
+}
+// 시장 온도: 그날 TOP30 평균 상승률이 누적 기간 전체에서 몇 번째쯤인지(백분위). 0 = 가장 차분, 1 = 가장 뜨거움
+const avgOf = day => { const rs=S.boards[day]||[]; return rs.length ? rs.reduce((a,r)=>a+r.chg,0)/rs.length : 0; };
+function heatOf(day){
+  if(!S.heatRank){ const v = S.dates.map(avgOf).sort((a,b)=>a-b); S.heatRank = x => v.length>1 ? v.filter(y=>y<x).length/(v.length-1) : .5; }
+  return S.heatRank(avgOf(day));
+}
+const mix = (a,b,t) => '#'+[0,2,4].map(i=>Math.round(parseInt(a.slice(1+i,3+i),16)*(1-t)+parseInt(b.slice(1+i,3+i),16)*t).toString(16).padStart(2,'0')).join('');
+function tempLabel(t){ return t<.25?'차분':t<.5?'보통':t<.75?'달아오름':'뜨거움'; }
+function applyTemp(){
+  const root = document.documentElement;
+  if(root.dataset.theme!=='temp'){ root.style.removeProperty('--paper'); root.style.removeProperty('--sticky'); return; }
+  const t = S.day ? heatOf(S.day) : 0;
+  const paper = t<.5 ? mix('#0f1a2e','#2a1530',t*2) : mix('#2a1530','#3d0d1a',(t-.5)*2);
+  root.style.setProperty('--paper', paper);
+  root.style.setProperty('--sticky', paper+'e6');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', paper);
 }
 function applyTheme(t){
   document.documentElement.dataset.theme = t;
-  $('theme').textContent = t==='dark' ? '☀️' : '🌙';
-  chartTheme();
-  if(S.dates.length){ renderBoard(); renderPeriod(); }
+  $('theme').value = t;
+  applyTemp(); chartTheme();
+  if(S.dates.length){ renderDay(); renderPeriod(); }
 }
-const mq = matchMedia('(prefers-color-scheme: dark)');
-applyTheme(store.get('top30-theme') || (mq.matches ? 'dark' : 'light'));
-mq.addEventListener?.('change', e => { if(!store.get('top30-theme')) applyTheme(e.matches?'dark':'light'); });
-$('theme').onclick = () => { const t = document.documentElement.dataset.theme==='dark'?'light':'dark'; store.set('top30-theme',t); applyTheme(t); };
+applyTheme(store.get('top30-theme') || 'temp');
+$('theme').onchange = e => { store.set('top30-theme', e.target.value); applyTheme(e.target.value); };
 
 // ---------------------------------------------------------------- 불러오기
 async function load(){
@@ -368,7 +424,9 @@ function renderDay(){
   const lim = rows.filter(isLimit).length, small = rows.filter(r=>r.cap && r.cap<1e11).length;
   const avg = rows.reduce((a,r)=>a+r.chg,0)/rows.length, top = topSectors(rows,1)[0];
   $('stats').innerHTML = `<span>평균<b class="r">${pct(avg)}</b></span><span>상한가<b class="r">${lim}</b></span>
-    <span>1천억 미만<b>${small}/${rows.length}</b></span><span>1위 섹터<b>${top?esc(top[0]):'-'}</b></span>`;
+    <span>1천억 미만<b>${small}/${rows.length}</b></span><span>1위 섹터<b>${top?esc(top[0]):'-'}</b></span>
+    <span class="temp">시장 온도<i style="--t:${heatOf(S.day).toFixed(2)}"></i><b>${tempLabel(heatOf(S.day))}</b></span>`;
+  applyTemp();
   renderBoard(); renderDayTable();
   document.querySelectorAll('.dcell').forEach(c=>c.setAttribute('aria-current', c.dataset.d===S.day));
 }
