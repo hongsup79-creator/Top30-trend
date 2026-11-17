@@ -5,6 +5,9 @@ on:
     # 평일 20:30 KST (= 11:30 UTC) — 네이버 차트가 애프터마켓(~20:00) 반영 후 확정
     - cron: "30 11 * * 1-5"
   workflow_dispatch:
+  # .github/run-now 파일을 고쳐 올리면 바로 실행 (Claude가 버튼 없이 실행할 때 사용)
+  push:
+    paths: [".github/run-now"]
 
 permissions:
   contents: write
