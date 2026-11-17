@@ -89,3 +89,25 @@ def test_build_summary_streaks():
     assert s["momentum"][0]["code"] == "A"
     rec = {r["code"]: r["count"] for r in s["recurring"]}
     assert rec == {"A": 3, "B": 2, "C": 2}
+
+
+def test_is_excluded_products():
+    assert is_excluded("미래에셋 인버스 2X 반도체 ETN", "520036")
+    assert is_excluded("SOL SK하이닉스선물단일종목인버스2X", "123450")
+    assert is_excluded("KODEX 200", "069500")
+    assert is_excluded("아무거나", "123450", sector="기타") is False   # 기타라도 상품명이 아니면 포함
+
+
+def test_official_override_ranks_by_krx_ratio():
+    price = _frame({
+        "A00001": [100, 100, 127.8],   # 차트(넥스트레이드 포함) +27.8%
+        "A00002": [100, 100, 128.5],   # 차트 +28.5%
+    })
+    meta = {"A00001": {"name": "가", "sector": "s", "cap": 1e11},
+            "A00002": {"name": "나", "sector": "s", "cap": 1e11}}
+    official = {("20261112", "A00001"): {"chg": 30.0, "close": 130.0, "vol": 10.0}}
+    rows = daily_top(price, meta, n=2, official=official)["20261112"]
+    assert [r["code"] for r in rows] == ["A00001", "A00002"]
+    assert rows[0]["chg"] == 30.0 and rows[0]["close"] == 130.0 and rows[0]["src"] == "krx"
+    assert rows[0]["amount"] == 1300 and rows[0]["limit"] is True
+    assert rows[1]["src"] == "chart" and rows[1]["limit"] is False

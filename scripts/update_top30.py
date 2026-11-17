@@ -6,7 +6,9 @@ TOP30 트렌드 데이터 생성 스크립트
 
 데이터 출처 (로그인 불필요, Stock Trend Radar와 동일)
   - 종목·업종·시가총액 : 네이버 업종 분류 (m.stock.naver.com/api/stocks/industry)
-  - 일별 종가·거래량   : 네이버 차트 (fchart.stock.naver.com)
+  - 후보 선정용 종가   : 네이버 차트 (fchart.stock.naver.com) — 넥스트레이드 애프터마켓이 섞일 수 있음
+  - 공식 등락률·종가   : 네이버 증권 일별 시세 (m.stock.naver.com/api/stock/{코드}/price) — 거래소 정규장 기준
+    → 차트로 날마다 상위 80개 후보를 뽑고, 후보만 공식 값으로 다시 순위를 매김
 
 결과
   data/boards/YYYYMM.json  {"YYYYMMDD": [TOP30 행, ...], ...}
@@ -37,6 +39,7 @@ TOP_N = 30
 BACKFILL_DAYS = 70       # 처음 실행 시 약 3개월
 RECENT_DAYS = 10         # 평소: 최근 10거래일 다시 계산(정정 반영)
 WORKERS = 8              # 동시 요청 수 (너무 크면 네이버가 막을 수 있음)
+SCHEMA = 2               # 계산 방식이 바뀌면 올림 → 다음 실행에서 전 기간 다시 계산
 MIN_UNIVERSE = 1000      # 이보다 적게 받아지면 수집 실패로 보고 중단(기존 데이터 보존)
 
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -220,6 +223,69 @@ def drop_intraday(df):
     return df
 
 
+def _num(v):
+    try:
+        return float(str(v).replace(",", "").replace("+", "").strip())
+    except Exception:
+        return None
+
+
+def parse_official(data):
+    """일별 시세 JSON → {YYYYMMDD: {chg, close, vol}}. 키 이름이 바뀌어도 찾도록 너그럽게 파싱"""
+    out = {}
+
+    def walk(o):
+        if isinstance(o, dict):
+            dkey = next((k for k in ("localTradedAt", "tradeDate", "localDate", "date") if k in o), None)
+            if dkey and "closePrice" in o:
+                d = re.sub(r"\D", "", str(o[dkey]))[:8]
+                close = _num(o.get("closePrice"))
+                chg = _num(o.get("fluctuationsRatio"))
+                if chg is not None:
+                    # 하락 표시는 compareToPreviousPrice.name(FALLING/LOWER_LIMIT) 또는 부호로 구분
+                    kind = str((o.get("compareToPreviousPrice") or {}).get("name", "")).upper()
+                    if chg > 0 and ("FALL" in kind or "LOWER" in kind):
+                        chg = -chg
+                if len(d) == 8 and close and chg is not None:
+                    out[d] = {"chg": chg, "close": close,
+                              "vol": _num(o.get("accumulatedTradingVolume"))}
+                return
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+
+    walk(data)
+    return out
+
+
+def fetch_official(codes, days):
+    """후보 종목의 거래소 공식 일별 등락률 → {(YYYYMMDD, 코드): {...}}"""
+    size = min(60, days + 2)
+    pages = (days + 2 + size - 1) // size
+
+    def one(c):
+        res = {}
+        for page in range(1, pages + 1):
+            try:
+                res.update(parse_official(_get(
+                    f"https://m.stock.naver.com/api/stock/{c}/price?pageSize={size}&page={page}")))
+            except Exception:
+                break
+        return res
+
+    official = {}
+    for c, res in zip(codes, pmap(one, codes)):
+        for d, v in res.items():
+            official[(d, c)] = v
+    got = len({c for _, c in official})
+    print(f"  공식 시세 {got}/{len(codes)}종목")
+    if codes and got < len(codes) * 0.5:
+        warn(f"공식 시세를 {got}/{len(codes)}종목만 받았습니다 — 나머지는 차트 가격으로 계산합니다.")
+    return official
+
+
 # ---------------------------------------------------------------- 가짜 데이터
 SECTORS = ["반도체와반도체장비", "제약", "생물공학", "조선", "기계", "전기장비", "소프트웨어",
            "화학", "자동차부품", "건설", "게임엔터테인먼트", "식품", "통신장비", "IT서비스",
@@ -255,6 +321,9 @@ def save_boards(boards):
     by_month = {}
     for d, rows in boards.items():
         by_month.setdefault(d[:6], {})[d] = rows
+    for f in BOARDS.glob("*.json"):                 # 기간 밖으로 밀려난 옛 월 파일 정리
+        if f.stem not in by_month:
+            f.unlink()
     for ym, part in by_month.items():
         (BOARDS / f"{ym}.json").write_text(
             json.dumps(dict(sorted(part.items())), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -274,6 +343,13 @@ def main():
     args = ap.parse_args()
 
     boards = load_boards()
+    try:
+        old_schema = json.loads((DATA / "summary.json").read_text(encoding="utf-8")).get("schema", 1)
+    except Exception:
+        old_schema = SCHEMA
+    if boards and old_schema != SCHEMA:
+        print(f"  계산 방식 변경(v{old_schema}→v{SCHEMA}) → 전 기간 다시 계산")
+        boards = {}
     count = days_needed(boards)
     if args.demo:
         meta, price, vol = demo_inputs(BACKFILL_DAYS)
@@ -288,14 +364,23 @@ def main():
         if price.shape[1] < MIN_UNIVERSE:
             sys.exit(f"시세가 {price.shape[1]}종목뿐 — 수집 실패로 보고 중단합니다(기존 데이터 보존).")
 
-    new = daily_top(price, meta, vol, n=TOP_N)
+    official = {}
+    if not args.demo:
+        cands = sorted({r["code"] for rows in daily_top(price, meta, vol, n=80).values() for r in rows})
+        print(f"3) 공식 등락률 수집 (후보 {len(cands)}종목)")
+        official = fetch_official(cands, count)
+    new = daily_top(price, meta, vol, n=TOP_N, official=official)
+    krx = sum(r["src"] == "krx" for rows in new.values() for r in rows)
+    total = sum(len(rows) for rows in new.values())
     boards.update(new)
     save_boards(boards)
     summary = build_summary(boards)
     summary["generated_at"] = datetime.now(KST).isoformat(timespec="minutes")
     summary["demo"] = bool(args.demo)
+    summary["schema"] = SCHEMA
+    summary["krx_share"] = round(krx / total, 3) if total else 0     # 공식 시세로 계산된 비율(점검용)
     (DATA / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"3) 저장: {len(new)}일 갱신, 전체 {len(summary['dates'])}일 (최신 {summary['latest_date']})")
+    print(f"4) 저장 (공식 시세 {krx}/{total}행): {len(new)}일 갱신, 전체 {len(summary['dates'])}일 (최신 {summary['latest_date']})")
 
 
 if __name__ == "__main__":
