@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOP30 트렌드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#fff; --ink:#191f28; --sub:#6b7684; --line:#e5e8eb;
+  --up:#e5383b; --up-soft:#fdecec; --accent:#3182f6; --accent-soft:#e8f3ff;
+  --b0:#ffb3a7; --b1:#ff7b6b; --b2:#e5383b; --b3:#8b1e2b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 14px 60px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px;margin:6px 2px 14px}
+h1{font-size:22px;margin:0;letter-spacing:-.4px}
+h1 small{display:block;font-size:13px;font-weight:500;color:var(--sub);margin-top:4px;letter-spacing:0}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;
+  padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.banner{background:#fff6dd;border:1px solid #f5d77a;color:#7a5b00;border-radius:12px;padding:10px 14px;font-size:13px;margin-bottom:12px}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.card h2{font-size:16px;margin:0 0 4px;letter-spacing:-.2px}
+.card .hint{font-size:12px;color:var(--sub);margin:0 0 12px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.kpi{background:var(--card);border-radius:14px;padding:12px 14px}
+.kpi b{display:block;font-size:20px;margin-top:4px;letter-spacing:-.3px}
+.kpi span{font-size:12px;color:var(--sub)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--up-soft);color:var(--up);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.seg{display:inline-flex;background:var(--bg);border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;font:inherit;font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer;color:var(--sub)}
+.seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+select{font:inherit;font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card)}
+.sticky{position:sticky;top:0;z-index:5;background:rgba(245,246,248,.92);backdrop-filter:blur(8px);
+  padding:10px 2px;margin:0 -2px 10px;border-bottom:1px solid var(--line)}
+.sticky .label{font-size:13px;color:var(--sub);margin-left:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:12px;color:var(--sub);font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td.up{color:var(--up);font-weight:700}
+td a{color:var(--ink);text-decoration:none;font-weight:600}
+td a:hover{color:var(--accent);text-decoration:underline}
+.sub-m{display:none;font-size:11px;color:var(--sub);font-weight:400;margin-top:2px}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;background:var(--bg);color:var(--sub)}
+.streak{display:inline-block;font-size:11px;padding:2px 6px;border-radius:6px;background:var(--up-soft);color:var(--up);font-weight:700}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.daynav{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.daynav .d{font-weight:700;font-size:15px;min-width:110px;text-align:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chartbox{position:relative;height:340px}
+.heat{width:auto;border-collapse:separate;border-spacing:2px;font-size:11px}
+.heat th{position:sticky;left:0;background:var(--card);z-index:1;font-weight:600;color:var(--ink);padding:0 8px 0 0;
+  text-align:right;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.heat thead th{position:static;color:var(--sub);font-weight:500;text-align:center;padding:0 0 4px}
+.heat th,.heat td{border-bottom:0}
+.heat td{width:26px;min-width:26px;height:24px;border:0;border-radius:4px;text-align:center;padding:0;cursor:pointer;
+  font-variant-numeric:tabular-nums;transition:transform .12s}
+.heat td:hover{transform:scale(1.18);outline:2px solid var(--ink)}
+.heat td.z{cursor:default;background:#f2f4f6}
+.heat td.z:hover{transform:none;outline:0}
+.panel{position:fixed;inset:auto 0 0 0;max-height:70vh;background:var(--card);border-radius:18px 18px 0 0;
+  box-shadow:0 -8px 30px rgba(0,0,0,.18);transform:translateY(105%);transition:transform .25s ease;z-index:20;
+  display:flex;flex-direction:column;visibility:hidden}
+.panel.open{transform:none;visibility:visible}
+.panel .ph{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.panel .ph b{font-size:15px}
+.panel .pb{overflow:auto;padding:4px 12px 20px}
+@media(min-width:900px){
+  .panel{inset:0 0 0 auto;width:420px;max-height:none;border-radius:18px 0 0 18px;transform:translateX(105%)}
+}
+.dim{position:fixed;inset:0;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;z-index:15}
+.dim.open{opacity:1;pointer-events:auto}
+.loading{padding:40px;text-align:center;color:var(--sub)}
+footer{font-size:12px;color:var(--sub);line-height:1.6;margin-top:16px;padding:0 4px}
+@media(max-width:720px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .grid2{grid-template-columns:1fr}
+  .hide-m{display:none}
+  .sub-m{display:block}
+  .daynav{flex-wrap:wrap}
+  .chartbox{height:300px}
+  h1{font-size:20px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>TOP30 트렌드<small id="asof">불러오는 중…</small></h1>
+    <div class="row">
+      <a class="btn" href="https://kr.investing.com/indices/korea-200-futures" target="_blank" rel="noopener">야간선물 보기 ↗</a>
+      <button class="btn primary" id="dl">엑셀 다운로드</button>
+    </div>
+  </header>
+  <div id="demo" class="banner" hidden>지금 보이는 것은 화면 확인용 <b>가짜 데이터</b>입니다. 첫 자동 실행(평일 20:30) 후 실제 데이터로 바뀝니다.</div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section class="card">
+    <h2>하루 TOP30</h2>
+    <p class="hint">코스피·코스닥 통합 등락률 상위 30종목 (스팩·우선주 제외). 종목명을 누르면 네이버 증권 뉴스로 이동합니다.</p>
+    <div class="daynav">
+      <button class="btn" id="prevDay">◀</button>
+      <span class="d" id="dayLabel"></span>
+      <button class="btn" id="nextDay">▶</button>
+      <div class="chips" id="dayChips" style="margin-left:8px"></div>
+    </div>
+    <div class="scroll"><table id="dayTable"></table></div>
+  </section>
+
+  <div class="sticky row">
+    <div class="seg" id="seg">
+      <button data-v="recent" class="on">최근 20일</button>
+      <button data-v="month">월별</button>
+      <button data-v="week">주별</button>
+      <button data-v="all">전체</button>
+    </div>
+    <select id="sub" hidden></select>
+    <span class="label" id="rangeLabel"></span>
+  </div>
+
+  <section class="card">
+    <h2>섹터 순위</h2>
+    <p class="hint">조회 기간 동안 TOP30에 든 횟수. 막대를 누르면 해당 종목이 나옵니다.</p>
+    <div class="chartbox"><canvas id="secChart"></canvas></div>
+  </section>
+
+  <section class="card">
+    <h2>섹터 히트맵 (일자 × 섹터)</h2>
+    <p class="hint">칸 숫자 = 그날 TOP30에 든 종목 수. 진할수록 많음. 칸을 누르면 종목이 나옵니다.</p>
+    <div class="scroll"><table class="heat" id="heat"></table></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>연속 등장 (모멘텀)</h2>
+      <p class="hint">최신일 기준 이틀 이상 연속으로 TOP30에 든 종목.</p>
+      <div class="scroll"><table id="momTable"></table></div>
+    </section>
+    <section class="card">
+      <h2>반복 등장 종목</h2>
+      <p class="hint">조회 기간 안에서 TOP30에 여러 번 든 종목.</p>
+      <div class="scroll"><table id="recTable"></table></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>시가총액 구간 비중</h2>
+    <p class="hint">TOP30이 소형주 위주인지, 대형주까지 오르는지 흐름을 봅니다.</p>
+    <div class="chartbox"><canvas id="capChart"></canvas></div>
+  </section>
+
+  <footer>
+    데이터: 네이버 증권(업종 분류·일별 종가). 평일 20:30 자동 갱신.
+    과거 일자의 시가총액은 현재 시총에 당일 종가 비율을 곱한 근사값입니다.
+    가격제한폭(±30%)을 넘는 변동(분할·병합 등)과 신규상장 첫날은 제외합니다. 투자 판단의 책임은 본인에게 있습니다.
+  </footer>
+</div>
+
+<div class="dim" id="dim"></div>
+<aside class="panel" id="panel">
+  <div class="ph"><b id="panelTitle"></b><button class="btn" id="panelClose">닫기</button></div>
+  <div class="pb"><table id="panelTable"></table></div>
+</aside>
+
+<script>
+const S = {summary:null, boards:{}, dates:[], day:null, view:'recent', sub:null, charts:{}};
+const BUCKET_COLORS = ['#ffb3a7','#ff7b6b','#e5383b','#8b1e2b'];
+
+const fmtDate = d => `${d.slice(0,4)}.${d.slice(4,6)}.${d.slice(6)}`;
+const shortDate = d => `${+d.slice(4,6)}/${+d.slice(6)}`;
+const fmtCap = v => !v ? '-' : v >= 1e12 ? (v/1e12).toFixed(1)+'조' : Math.round(v/1e8).toLocaleString()+'억';
+const fmtAmt = v => !v ? '-' : Math.round(v/1e8).toLocaleString()+'억';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const newsUrl = c => `https://m.stock.naver.com/domestic/stock/${c}/news`;
+const stockLink = r => `<a href="${newsUrl(r.code)}" target="_blank" rel="noopener">${esc(r.name)}</a>`;
+
+async function getJSON(u){
+  const r = await fetch(u, {cache:'no-store'});
+  if(!r.ok) throw new Error(`${u} ${r.status}`);
+  return r.json();
+}
+
+async function load(){
+  try{
+    S.summary = await getJSON('data/summary.json');
+    const parts = await Promise.all(S.summary.months.map(m => getJSON(`data/boards/${m}.json`)));
+    parts.forEach(p => Object.assign(S.boards, p));
+  }catch(e){
+    document.getElementById('asof').textContent = '데이터를 불러오지 못했습니다. 첫 자동 실행 전이거나 오류입니다.';
+    console.error(e); return;
+  }
+  S.dates = Object.keys(S.boards).sort();
+  if(!S.dates.length){ document.getElementById('asof').textContent = '아직 데이터가 없습니다.'; return; }
+  S.day = S.dates[S.dates.length-1];
+  const g = S.summary.generated_at ? ` · 갱신 ${S.summary.generated_at.replace('T',' ').slice(0,16)}` : '';
+  document.getElementById('asof').textContent = `기준일 ${fmtDate(S.day)} · ${S.dates.length}거래일 누적${g}`;
+  document.getElementById('demo').hidden = !S.summary.demo;
+  renderKpis(); renderDay(); renderMomentum(); renderPeriod();
+}
+
+// streak[code] for a given date = 연속 등장 일수 (그날 포함)
+function streakOn(date){
+  const i = S.dates.indexOf(date), res = {};
+  for(const r of S.boards[date]){
+    let k = 0;
+    for(let j=i; j>=0; j--){ if(S.boards[S.dates[j]].some(x=>x.code===r.code)) k++; else break; }
+    res[r.code] = k;
+  }
+  return res;
+}
+
+function topSectors(rows, n){
+  const c = {};
+  rows.forEach(r => c[r.sector] = (c[r.sector]||0)+1);
+  return Object.entries(c).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,n);
+}
+
+function renderKpis(){
+  const rows = S.boards[S.day], top = topSectors(rows,1)[0];
+  const small = rows.filter(r=>r.cap && r.cap<1e11).length;
+  const avg = rows.reduce((a,r)=>a+r.chg,0)/rows.length;
+  const mom = (S.summary.momentum||[]).length;
+  document.getElementById('kpis').innerHTML = [
+    ['오늘 1위 섹터', top ? `${esc(top[0])} <span>${top[1]}종목</span>` : '-'],
+    ['TOP30 평균 상승률', `+${avg.toFixed(1)}%`],
+    ['1천억 미만 소형주', `${small}<span> / ${rows.length}</span>`],
+    ['연속 등장 종목', `${mom}<span>개</span>`],
+  ].map(([k,v])=>`<div class="kpi"><span>${k}</span><b>${v}</b></div>`).join('');
+}
+
+function renderDay(){
+  const rows = S.boards[S.day], st = streakOn(S.day), i = S.dates.indexOf(S.day);
+  document.getElementById('dayLabel').textContent = fmtDate(S.day);
+  document.getElementById('prevDay').disabled = i<=0;
+  document.getElementById('nextDay').disabled = i>=S.dates.length-1;
+  document.getElementById('dayChips').innerHTML =
+    topSectors(rows,3).map(([s,n])=>`<span class="chip">${esc(s)} ${n}</span>`).join('');
+  document.getElementById('dayTable').innerHTML =
+    `<thead><tr><th>#</th><th>종목</th><th class="num">등락률</th><th class="hide-m">섹터</th><th class="num">시총</th><th class="num hide-m">거래대금</th><th class="num">연속</th></tr></thead><tbody>` +
+    rows.map(r=>`<tr><td>${r.rank}</td><td>${stockLink(r)}<div class="sub-m">${esc(r.sector)}</div></td><td class="num up">+${r.chg.toFixed(2)}%</td>
+      <td class="hide-m"><span class="tag">${esc(r.sector)}</span></td><td class="num">${fmtCap(r.cap)}</td>
+      <td class="num hide-m">${fmtAmt(r.amount)}</td>
+      <td class="num">${st[r.code]>=2?`<span class="streak">${st[r.code]}일</span>`:''}</td></tr>`).join('') + '</tbody>';
+}
+
+function renderMomentum(){
+  const m = (S.summary.momentum||[]).slice(0,20);
+  document.getElementById('momTable').innerHTML = m.length ?
+    `<thead><tr><th>종목</th><th>섹터</th><th class="num">연속</th><th class="num">최장</th></tr></thead><tbody>` +
+    m.map(r=>`<tr><td>${stockLink(r)}</td><td><span class="tag">${esc(r.sector)}</span></td>
+      <td class="num"><span class="streak">${r.current_streak}일</span></td><td class="num">${r.max_streak}일</td></tr>`).join('') + '</tbody>'
+    : '<tbody><tr><td class="loading">연속 등장 종목이 없습니다.</td></tr></tbody>';
+}
+
+// ---- 기간
+function weekKey(d){
+  const dt = new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6));
+  const mon = new Date(dt); mon.setDate(dt.getDate() - ((dt.getDay()+6)%7));
+  return `${mon.getFullYear()}${String(mon.getMonth()+1).padStart(2,'0')}${String(mon.getDate()).padStart(2,'0')}`;
+}
+function periodDates(){
+  if(S.view==='recent') return S.dates.slice(-20);
+  if(S.view==='all') return S.dates;
+  if(S.view==='month') return S.dates.filter(d=>d.slice(0,6)===S.sub);
+  return S.dates.filter(d=>weekKey(d)===S.sub);
+}
+function setupSub(){
+  const sel = document.getElementById('sub');
+  if(S.view==='month' || S.view==='week'){
+    const keys = [...new Set(S.dates.map(d => S.view==='month'? d.slice(0,6) : weekKey(d)))].reverse();
+    sel.innerHTML = keys.map(k=>`<option value="${k}">${S.view==='month' ? `${k.slice(0,4)}년 ${+k.slice(4)}월` : `${shortDate(k)} 주`}</option>`).join('');
+    S.sub = keys[0]; sel.hidden = false;
+  } else { sel.hidden = true; S.sub = null; }
+}
+
+function renderPeriod(){
+  const ds = periodDates(), rows = ds.flatMap(d => S.boards[d].map(r=>({...r,date:d})));
+  document.getElementById('rangeLabel').textContent = ds.length ? `${shortDate(ds[0])}~${shortDate(ds[ds.length-1])} · ${ds.length}일` : '';
+  S.periodRows = rows;
+  renderSectorChart(rows); renderHeat(ds, rows); renderRecurring(rows); renderCapChart(ds);
+}
+
+function renderSectorChart(rows){
+  const top = topSectors(rows, 15);
+  const ctx = document.getElementById('secChart');
+  S.charts.sec?.destroy();
+  S.charts.sec = new Chart(ctx, {
+    type:'bar',
+    data:{labels:top.map(t=>t[0]), datasets:[{data:top.map(t=>t[1]), backgroundColor:top.map((_,i)=>i<3?'#e5383b':'#ffb3a7'), borderRadius:6}]},
+    options:{indexAxis:'y', maintainAspectRatio:false, plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>` ${c.raw}회`}}},
+      scales:{x:{grid:{color:'#f0f1f3'}}, y:{grid:{display:false}, ticks:{autoSkip:false, font:{size:12}}}},
+      onHover:(e,el)=>e.native.target.style.cursor = el.length?'pointer':'default',
+      onClick:(e,el)=>{ if(!el.length) return; const s = top[el[0].index][0];
+        openPanel(`${s} · 조회 기간`, rows.filter(r=>r.sector===s), true); }}
+  });
+}
+
+function renderHeat(ds, rows){
+  const secs = topSectors(rows, 12).map(t=>t[0]);
+  const cnt = {}; let max = 1;
+  rows.forEach(r=>{ const k=r.date+'|'+r.sector; cnt[k]=(cnt[k]||0)+1; max=Math.max(max,cnt[k]); });
+  const color = v => { const t = Math.min(1, v/max); const a = 0.15 + 0.85*t;
+    return `background:rgba(229,56,59,${a.toFixed(2)});color:${t>0.45?'#fff':'#7a1c1f'}`; };
+  let h = '<thead><tr><th></th>' + ds.map(d=>`<th>${shortDate(d)}</th>`).join('') + '</tr></thead><tbody>';
+  for(const s of secs){
+    h += `<tr><th title="${esc(s)}">${esc(s)}</th>` + ds.map(d=>{
+      const v = cnt[d+'|'+s]||0;
+      return v ? `<td style="${color(v)}" data-d="${d}" data-s="${esc(s)}">${v}</td>` : '<td class="z"></td>';
+    }).join('') + '</tr>';
+  }
+  const el = document.getElementById('heat');
+  el.innerHTML = h + '</tbody>';
+  el.parentElement.scrollLeft = el.scrollWidth;      // 최근 날짜가 보이도록
+  el.querySelectorAll('td[data-d]').forEach(td => td.onclick = () => {
+    const d = td.dataset.d, s = td.dataset.s;
+    openPanel(`${fmtDate(d)} · ${s}`, S.boards[d].filter(r=>r.sector===s).map(r=>({...r,date:d})), false);
+  });
+}
+
+function renderRecurring(rows){
+  const m = {};
+  rows.forEach(r=>{ (m[r.code] ||= {...r, n:0, sum:0}); m[r.code].n++; m[r.code].sum += r.chg; });
+  const list = Object.values(m).filter(x=>x.n>=2).sort((a,b)=>b.n-a.n||b.sum-a.sum).slice(0,20);
+  document.getElementById('recTable').innerHTML = list.length ?
+    `<thead><tr><th>종목</th><th>섹터</th><th class="num">횟수</th><th class="num">평균</th></tr></thead><tbody>` +
+    list.map(r=>`<tr><td>${stockLink(r)}</td><td><span class="tag">${esc(r.sector)}</span></td>
+      <td class="num"><b>${r.n}</b></td><td class="num up">+${(r.sum/r.n).toFixed(1)}%</td></tr>`).join('') + '</tbody>'
+    : '<tbody><tr><td class="loading">기간 안에 두 번 이상 든 종목이 없습니다.</td></tr></tbody>';
+}
+
+function renderCapChart(ds){
+  const labels = S.summary.bucket_labels;
+  const data = labels.map(b => ds.map(d => { const rs=S.boards[d]; return +(100*rs.filter(r=>r.bucket===b).length/rs.length).toFixed(1); }));
+  S.charts.cap?.destroy();
+  S.charts.cap = new Chart(document.getElementById('capChart'), {
+    type:'bar',
+    data:{labels:ds.map(shortDate), datasets:labels.map((b,i)=>({label:b, data:data[i], backgroundColor:BUCKET_COLORS[i]}))},
+    options:{maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:12}}},
+        tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.raw}%`}}},
+      scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:0,autoSkipPadding:8}},
+        y:{stacked:true,max:100,ticks:{callback:v=>v+'%'},grid:{color:'#f0f1f3'}}}}
+  });
+}
+
+// ---- 상세 패널
+function openPanel(title, rows, withDate){
+  rows = [...rows].sort((a,b)=> withDate ? (b.date.localeCompare(a.date) || b.chg-a.chg) : b.chg-a.chg);
+  document.getElementById('panelTitle').textContent = `${title} (${rows.length})`;
+  document.getElementById('panelTable').innerHTML =
+    `<thead><tr>${withDate?'<th>일자</th>':''}<th>종목</th><th class="num">등락률</th><th class="num">시총</th></tr></thead><tbody>` +
+    rows.map(r=>`<tr>${withDate?`<td>${shortDate(r.date)}</td>`:''}<td>${stockLink(r)}</td>
+      <td class="num up">+${r.chg.toFixed(2)}%</td><td class="num">${fmtCap(r.cap)}</td></tr>`).join('') + '</tbody>';
+  document.getElementById('panel').classList.add('open');
+  document.getElementById('dim').classList.add('open');
+}
+function closePanel(){
+  document.getElementById('panel').classList.remove('open');
+  document.getElementById('dim').classList.remove('open');
+}
+
+// ---- 엑셀
+async function downloadXlsx(){
+  if(!S.periodRows) return;
+  if(!window.XLSX){
+    await new Promise((ok,ng)=>{ const s=document.createElement('script');
+      s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'; s.onload=ok; s.onerror=ng; document.head.appendChild(s); });
+  }
+  const rows = S.periodRows.map(r=>({'일자':fmtDate(r.date),'순위':r.rank,'종목코드':r.code,'종목명':r.name,
+    '등락률(%)':r.chg,'섹터':r.sector,'종가':r.close,'시가총액(억)':Math.round(r.cap/1e8),'거래대금(억)':Math.round(r.amount/1e8),'시총구간':r.bucket}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'TOP30');
+  const ds = periodDates();
+  XLSX.writeFile(wb, `TOP30_${ds[0]}_${ds[ds.length-1]}.xlsx`);
+}
+
+// ---- 이벤트
+document.getElementById('prevDay').onclick = () => { const i=S.dates.indexOf(S.day); if(i>0){S.day=S.dates[i-1]; renderDay();} };
+document.getElementById('nextDay').onclick = () => { const i=S.dates.indexOf(S.day); if(i<S.dates.length-1){S.day=S.dates[i+1]; renderDay();} };
+document.getElementById('seg').onclick = e => {
+  const b = e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on', x===b));
+  S.view = b.dataset.v; setupSub(); renderPeriod();
+};
+document.getElementById('sub').onchange = e => { S.sub = e.target.value; renderPeriod(); };
+document.getElementById('panelClose').onclick = closePanel;
+document.getElementById('dim').onclick = closePanel;
+document.addEventListener('keydown', e => { if(e.key==='Escape') closePanel(); });
+document.getElementById('dl').onclick = () => downloadXlsx().catch(()=>alert('엑셀 라이브러리를 불러오지 못했습니다.'));
+load();
+</script>
+</body>
+</html>
