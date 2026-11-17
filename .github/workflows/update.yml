@@ -9,6 +9,11 @@ on:
 permissions:
   contents: write
 
+# 실행 버튼을 연달아 눌러도 한 번에 하나씩만 돌도록 (데이터 커밋 충돌 방지)
+concurrency:
+  group: top30-update
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest

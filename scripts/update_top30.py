@@ -39,8 +39,10 @@ TOP_N = 30
 BACKFILL_DAYS = 70       # 처음 실행 시 약 3개월
 RECENT_DAYS = 10         # 평소: 최근 10거래일 다시 계산(정정 반영)
 WORKERS = 8              # 동시 요청 수 (너무 크면 네이버가 막을 수 있음)
-SCHEMA = 2               # 계산 방식이 바뀌면 올림 → 다음 실행에서 전 기간 다시 계산
+SCHEMA = 3               # 계산 방식이 바뀌면 올림 → 다음 실행에서 전 기간 다시 계산
 MIN_UNIVERSE = 1000      # 이보다 적게 받아지면 수집 실패로 보고 중단(기존 데이터 보존)
+MIN_AMOUNT = 5e8          # 거래대금 5억 원 미만은 제외 (거래가 거의 없는 종목의 급등 = 트렌드 잡음)
+POOL = 150               # 날마다 공식 등락률을 확인할 후보 수 (거래대금 필터로 빠지는 몫까지 넉넉히)
 
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     "(KHTML, like Gecko) Chrome/130.0 Safari/537.36",
@@ -366,10 +368,10 @@ def main():
 
     official = {}
     if not args.demo:
-        cands = sorted({r["code"] for rows in daily_top(price, meta, vol, n=80).values() for r in rows})
+        cands = sorted({r["code"] for rows in daily_top(price, meta, vol, n=POOL, pool=POOL).values() for r in rows})
         print(f"3) 공식 등락률 수집 (후보 {len(cands)}종목)")
         official = fetch_official(cands, count)
-    new = daily_top(price, meta, vol, n=TOP_N, official=official)
+    new = daily_top(price, meta, vol, n=TOP_N, official=official, pool=POOL, min_amount=MIN_AMOUNT)
     krx = sum(r["src"] == "krx" for rows in new.values() for r in rows)
     total = sum(len(rows) for rows in new.values())
     boards.update(new)

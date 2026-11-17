@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 
 BUCKETS = ["1천억 미만", "1천억~5천억", "5천억~1조", "1조 이상"]
-MAX_MOVE = 30.5
-LIMIT_UP = 29.5          # 상한가(호가 단위 때문에 29.5% 이상이면 상한가로 표시)          # 가격제한폭(±30%) 초과 = 분할·병합 등 기업행위로 보고 제외
+MAX_MOVE = 30.5          # 가격제한폭(±30%) 초과 = 분할·병합 등 기업행위로 보고 제외
+LIMIT_UP = 29.5          # 상한가(호가 단위 때문에 29.5% 이상이면 상한가로 표시)
 PREF_RE = re.compile(r"(\d?우[A-Z]?|우\(전환\))$")
 
 
@@ -37,11 +37,12 @@ def cap_bucket(cap_won: float) -> str:
 
 
 def daily_top(price: pd.DataFrame, meta: dict, vol: pd.DataFrame | None = None, n: int = 30,
-              official: dict | None = None, pool: int = 80) -> dict:
+              official: dict | None = None, pool: int = 80, min_amount: float = 0) -> dict:
     """일자별 등락률 상위 n종목.
     price: 행=날짜, 열=종목코드 종가(네이버 차트, 넥스트레이드 애프터마켓이 섞일 수 있음).
     official: {(YYYYMMDD, 코드): {chg, close, vol}} 거래소 공식 등락률·종가. 있으면 우선 사용.
-    차트 기준 상위 pool개를 후보로 잡고, 후보는 공식 값으로 바꿔 다시 순위를 매김."""
+    차트 기준 상위 pool개를 후보로 잡고, 후보는 공식 값으로 바꿔 다시 순위를 매김.
+    min_amount: 거래대금(원)이 이보다 적은 종목 제외(거래가 거의 없는 종목의 급등은 트렌드 잡음). 거래량을 모르면 포함."""
     official = official or {}
     cols = [c for c in price.columns if c in meta and not is_excluded(meta[c]["name"], c, meta[c].get("sector", ""))]
     price = price[cols].sort_index()
@@ -66,7 +67,12 @@ def daily_top(price: pd.DataFrame, meta: dict, vol: pd.DataFrame | None = None, 
             else:
                 v = float(vol.at[dt, code]) if vol is not None else np.nan
                 items.append((code, float(c), float(price.at[dt, code]), v, "chart"))
-        items = [it for it in items if abs(it[1]) <= MAX_MOVE]
+        def liquid(it):
+            v = it[3]
+            if not min_amount or v is None or (isinstance(v, float) and np.isnan(v)):
+                return True
+            return it[2] * float(v) >= min_amount
+        items = [it for it in items if abs(it[1]) <= MAX_MOVE and liquid(it)]
         items.sort(key=lambda it: (-it[1], it[0]))
         if not items:
             continue

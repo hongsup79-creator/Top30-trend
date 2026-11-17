@@ -111,3 +111,14 @@ def test_official_override_ranks_by_krx_ratio():
     assert rows[0]["chg"] == 30.0 and rows[0]["close"] == 130.0 and rows[0]["src"] == "krx"
     assert rows[0]["amount"] == 1300 and rows[0]["limit"] is True
     assert rows[1]["src"] == "chart" and rows[1]["limit"] is False
+
+
+def test_min_amount_filters_illiquid():
+    price = _frame({"A00001": [100, 100, 120], "A00002": [100, 100, 110], "A00003": [100, 100, 105]})
+    meta = {c: {"name": c, "sector": "s", "cap": 1e11} for c in price.columns}
+    official = {("20261112", "A00001"): {"chg": 20.0, "close": 120.0, "vol": 1000.0},        # 12만원 → 제외
+                ("20261112", "A00002"): {"chg": 10.0, "close": 110.0, "vol": 10_000_000.0},  # 11억 → 포함
+                ("20261112", "A00003"): {"chg": 5.0, "close": 105.0, "vol": None}}           # 거래량 모름 → 포함
+    rows = daily_top(price, meta, n=30, official=official, min_amount=5e8)["20261112"]
+    assert [r["code"] for r in rows] == ["A00002", "A00003"]
+    assert rows[0]["rank"] == 1
